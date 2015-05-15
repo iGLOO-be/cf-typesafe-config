@@ -21,12 +21,13 @@ component {
         }
 
         if( !isNull(key) && isSimpleValue(result) ) {
-            var fileMatch = reFindNoSuck('^\<file\:(.+)\>$', trim(result));
-            if( arrayLen(fileMatch) ) {
-                var file = fileRead(fileMatch[1]);
+            if( valueIsFileContent(result) ) {
+                var file = resolveValueIsFileContent(result);
                 __set(key, file);
                 return file;
             }
+        } else if( isStruct(result) ) {
+            result = resolveValuesIsFileContent(result);
         }
 
         return result;
@@ -80,6 +81,37 @@ component {
         }
 
         return awesome;
+    }
+
+    private boolean function valueIsFileContent(required string value) {
+        return len(parseValueFilePath(value));
+    }
+
+    private string function parseValueFilePath(required string value) {
+        var fileMatch = reFindNoSuck('^\<file\:(.+)\>$', trim(value));
+        if( arrayLen(fileMatch) ) {
+            return fileMatch[1];
+        }
+        return '';
+    }
+
+    private string function resolveValueIsFileContent(required string value) {
+        var file = fileRead(parseValueFilePath(value));
+        return file;
+    }
+
+    private struct function resolveValuesIsFileContent(required struct data) {
+        var key = '';
+        for( key in data ) {
+            var value = data[key];
+            if( isSimpleValue(value) && valueIsFileContent(value) ) {
+                data[key] = resolveValueIsFileContent(value);
+            } else if( isStruct(value) ) {
+                data[key] = resolveValuesIsFileContent(value);
+            }
+        }
+
+        return data;
     }
 
 }
