@@ -91,7 +91,7 @@ component {
                     ));
                 break;
                 case "struct":
-                    arrayAppend(configContainers, configFactory.parseMap(_config.value));
+                    arrayAppend(configContainers, configFactory.parseMap(sanitizeKeys(_config.value)));
                 break;
             }
         }
@@ -166,6 +166,33 @@ component {
             variables.configFactory = javaLoader.create('com.typesafe.config.ConfigFactory');
         }
         return variables.configFactory;
+    }
+
+    private any function sanitizeKeys(required any _values) {
+        if (isStruct(_values)) {
+            var values = {};
+            for (var key in _values) {
+                if (findNoCase(':', key)) {
+                    continue;
+                }
+                var value = _values[key];
+                if (isSimpleValue(value)) {
+                    values[key] = value;
+                } else if (isArray(value) || isStruct(value)) {
+                    values[key] = sanitizeKeys(value);
+                }
+            }
+            return values;
+        }
+        if (isArray(_values)) {
+            var values = [];
+            for (var i = 1; i < arrayLen(_values); i++) {
+                values[i] = sanitizeKeys(_values[i]);
+            }
+            return values;
+        }
+
+        return _values;
     }
 
 }
